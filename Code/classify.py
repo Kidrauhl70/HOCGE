@@ -1,10 +1,13 @@
 from __future__ import print_function
-import numpy
+import numpy 
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.metrics import f1_score
 from sklearn.preprocessing import MultiLabelBinarizer
 from time import time
 import pandas as pd
+from sklearn.model_selection import StratifiedKFold
+from sklearn.metrics import f1_score
+from sklearn.preprocessing import LabelEncoder
 
 class TopKRanker(OneVsRestClassifier):
     def predict(self, X, top_k_list):
@@ -28,7 +31,7 @@ class Classifier(object):
 
     def train(self, X, Y, Y_all):
         self.binarizer.fit(Y_all)
-        X_train = [self.embeddings[int(x)] for x in X]
+        X_train = [self.embeddings[x] for x in X]
         Y = self.binarizer.transform(Y)
         self.clf.fit(X_train, Y)
 
@@ -36,7 +39,8 @@ class Classifier(object):
         top_k_list = [len(l) for l in Y]  # 每个节点的标签个数（为了多标签分类问题）
         Y_ = self.predict(X, top_k_list)
         Y = self.binarizer.transform(Y)
-        averages = ["micro", "macro", "samples", "weighted"]
+        # averages = ["micro", "macro", "samples", "weighted"]
+        averages = ["micro"]
         results = {}
         for average in averages:
             results[average] = f1_score(Y, Y_, average=average)
@@ -47,7 +51,12 @@ class Classifier(object):
         # print('-------------------')
 
     def predict(self, X, top_k_list):
-        X_ = numpy.asarray([self.embeddings[int(x)] for x in X])
+        X_ = numpy.asarray([self.embeddings[x] for x in X])
+        # try:
+        #     X_ = numpy.asarray([self.embeddings[x] for x in X])
+        # except KeyError as e:
+        #     print(f"KeyError: {e} for node {x}")
+        #     x = e.args[0]
         Y = self.clf.predict(X_, top_k_list=top_k_list)
         return Y
 
@@ -66,6 +75,41 @@ class Classifier(object):
         self.train(X_train, Y_train, Y)
         numpy.random.set_state(state)
         return self.evaluate(X_test, Y_test)
+
+
+    # def split_train_evaluate(self, X, Y, k=5, seed=None):  # k折交叉验证
+    #     state = numpy.random.get_state()
+
+    #     # 将X和Y转换为numpy数组，方便后续处理
+    #     X = numpy.array(X)
+    #     Y = numpy.array(Y)
+
+    #     # 使用StratifiedKFold进行分层5折交叉验证
+    #     skf = StratifiedKFold(n_splits=k, shuffle=True, random_state=seed)
+
+    #     accuracy_scores = []  # 用于保存每一折的准确率
+    #     score = []
+    #     i = 0
+    #     for train_indices, test_indices in skf.split(X, Y):
+    #         X_train, X_test = X[train_indices], X[test_indices]
+    #         Y_train, Y_test = Y[train_indices], Y[test_indices]
+
+    #         # 检查是否有重复的节点
+    #         assert len(pd.unique(X_train)) + len(pd.unique(X_test)) == len(X), "X_train and X_test are not disjoint"
+
+    #         # 训练模型
+    #         self.train(X_train.tolist(), Y_train.tolist(), Y.tolist())
+
+    #         # 评估模型
+    #         accuracy = self.evaluate(X_test.tolist(), Y_test.tolist())
+    #         score.append(accuracy['micro'])
+    #         i += 1
+    #         accuracy_scores.append(accuracy)
+
+    #     numpy.random.set_state(state)
+    #     mean_accuracy = numpy.mean(score)
+    #     print('mean_accuracy:', mean_accuracy)
+    #     return mean_accuracy
 
 
 def load_embeddings(filename):

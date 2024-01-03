@@ -1,0 +1,9 @@
+*.png
+
+data/dat_dge/Results/
+Code/__pycache__/
+
+data/dat_dge/*_matched_test.txt
+data/dat_dge/*_matched_train.txt
+
+data/NoLabel/Results/*.txt

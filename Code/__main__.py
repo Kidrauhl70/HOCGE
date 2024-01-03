@@ -1,219 +1,77 @@
 from __future__ import print_function
 import numpy as np
 import random
-import os
-from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
-from sklearn.linear_model import LogisticRegression
-from graph import *
-from node2vec import *
-from classify import Classifier, read_node_label
-from line import *
-from tadw import *
-# from gcn import gcnAPI
-from lle import *
-from hope import *
-from lap import *
-from gf import *
-from sdne import *
-from grarep import GraRep
 import time
-import ast
-from aggregate import Aggregate
-from pathprediction import *
-from classification import *
+from getembeddings import GetEmbeddings
+from args import parse_args
+import itertools
 
+# if __name__ == "__main__":
+#     # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # 0:全部输出，1:只输出警告和错误，2:只输出错误
 
-def parse_args():
-    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter,
-                            conflict_handler='resolve')
-    parser.add_argument('--input', required=True,
-                        help='Input graph file')
-    parser.add_argument('--output',
-                        help='Output representation file')
-    parser.add_argument('--number-walks', default=10, type=int,
-                        help='Number of random walks to start at each node')
-    parser.add_argument('--directed', action='store_true',
-                        help='Treat graph as directed.')
-    parser.add_argument('--walk-length', default=80, type=int,
-                        help='Length of the random walk started at each node')
-    parser.add_argument('--workers', default=8, type=int,
-                        help='Number of parallel processes.')
-    parser.add_argument('--representation-size', default=64, type=int,  # 原来为128
-                        help='Number of latent dimensions to learn for each node.')
-    parser.add_argument('--window-size', default=10, type=int,
-                        help='Window size of skipgram model.')
-    parser.add_argument('--epochs', default=5, type=int,
-                        help='The training epochs of LINE and GCN')
-    parser.add_argument('--p', default=1.0, type=float)
-    parser.add_argument('--q', default=1.0, type=float)
-    parser.add_argument('--method', required=True, choices=[
-        'node2vec',
-        'deepWalk',
-        'line',
-        # 'gcn',
-        'grarep',
-        'tadw',
-        'lle',
-        'hope',
-        'lap',
-        'gf',
-        'sdne'
-    ], help='The learning method')
-    parser.add_argument('--label-file', default='',
-                        help='The file of node label')
-    parser.add_argument('--feature-file', default='',
-                        help='The file of node features')
-    parser.add_argument('--graph-format', default='edgelist', choices=['adjlist', 'edgelist'],
-                        help='Input graph format')
-    parser.add_argument('--negative-ratio', default=5, type=int,
-                        help='the negative ratio of LINE')
-    parser.add_argument('--weighted', action='store_true',
-                        help='Treat graph as weighted')
-    parser.add_argument('--clf-ratio', default=0.7, type=float,
-                        help='The ratio of training data in the classification')
-    parser.add_argument('--order', default=3, type=int,
-                        help='Choose the order of LINE, 1 means first order, 2 means second order, 3 means first order + second order')
-    parser.add_argument('--no-auto-save', action='store_true',
-                        help='no save the best embeddings when training LINE')
-    parser.add_argument('--dropout', default=0.5, type=float,
-                        help='Dropout rate (1 - keep probability)')
-    parser.add_argument('--weight-decay', type=float, default=5e-4,
-                        help='Weight for L2 loss on embedding matrix')
-    parser.add_argument('--hidden', default=16, type=int,
-                        help='Number of units in hidden layer 1')
-    parser.add_argument('--kstep', default=4, type=int,
-                        help='Use k-step transition probability matrix')
-    parser.add_argument('--lamb', default=0.2, type=float,
-                        help='lambda is a hyperparameter in TADW')
-    parser.add_argument('--lr', default=0.01, type=float,
-                        help='learning rate')
-    parser.add_argument('--alpha', default=1e-6, type=float,
-                        help='alhpa is a hyperparameter in SDNE')
-    parser.add_argument('--beta', default=5., type=float,
-                        help='beta is a hyperparameter in SDNE')
-    parser.add_argument('--nu1', default=1e-5, type=float,
-                        help='nu1 is a hyperparameter in SDNE')
-    parser.add_argument('--nu2', default=1e-4, type=float,
-                        help='nu2 is a hyperparameter in SDNE')
-    parser.add_argument('--bs', default=200, type=int,
-                        help='batch size of SDNE')
-    parser.add_argument('--encoder-list', default='[1000, 128]', type=str,
-                        help='a list of numbers of the neuron at each encoder layer, the last number is the '
-                             'dimension of the output node representation')
-    parser.add_argument('--hon', action='store_true',
-                        help='Treat graph as higher-order network')
-    parser.add_argument('--task', default = 0, type=int,
-                        help='0 for Path predictiom, 1 for node classification')
-    args = parser.parse_args()
-
-    # if not args.output:
-    #     print("No output filename. Exit.")
-    #     exit(1)
-    # return args
-    if not args.output:
-        # output路径为input路径下的Results文件夹
-        args.output = os.path.join(os.path.dirname(args.input), 'Results')
-        # print(args.output)
-
-    return args
-
-
-def main(args):
-
-    g = Graph()
-    print("Reading...")
-
-    if args.graph_format == 'edgelist':
-        g.read_edgelist(filename=args.input, weighted=args.weighted,
-                        directed=args.directed)
-    elif args.graph_format == 'adjlist':
-        g.read_adjlist(filename=args.input)
-    
-    if args.method == 'node2vec':
-        model = Node2vec(graph=g, path_length=args.walk_length,
-                                  num_paths=args.number_walks, dim=args.representation_size,
-                                  workers=args.workers, p=args.p, q=args.q, window=args.window_size)
-       
-    elif args.method == 'line':
-        if args.label_file and not args.no_auto_save:
-            model = LINE(g, epoch=args.epochs, rep_size=args.representation_size, order=args.order,
-                              label_file=args.label_file, clf_ratio=args.clf_ratio)
-        else:
-            model = LINE(g, epoch=args.epochs,
-                              rep_size=args.representation_size, order=args.order)
-    elif args.method == 'deepWalk':
-        model = Node2vec(graph=g, path_length=args.walk_length,
-                                  num_paths=args.number_walks, dim=args.representation_size,
-                                  workers=args.workers, window=args.window_size, dw=True)
-    elif args.method == 'tadw':
-        # assert args.label_file != ''
-        assert args.feature_file != ''
-        g.read_node_label(args.label_file)
-        g.read_node_features(args.feature_file)
-        model = TADW(
-            graph=g, dim=args.representation_size, lamb=args.lamb)
-    elif args.method == 'grarep':
-        model = GraRep(graph=g, Kstep=args.kstep, dim=args.representation_size)
-    elif args.method == 'lle':
-        model = LLE(graph=g, d=args.representation_size)
-    elif args.method == 'hope':
-        model = HOPE(graph=g, d=args.representation_size)
-    elif args.method == 'sdne':
-        encoder_layer_list = ast.literal_eval(args.encoder_list)
-        model = SDNE(g, encoder_layer_list=encoder_layer_list,
-                          alpha=args.alpha, beta=args.beta, nu1=args.nu1, nu2=args.nu2,
-                          batch_size=args.bs, epoch=args.epochs, learning_rate=args.lr)
-    elif args.method == 'lap':
-        model = LaplacianEigenmaps(g, rep_size=args.representation_size)
-    elif args.method == 'gf':
-        model = GraphFactorization(g, rep_size=args.representation_size,
-                                      epoch=args.epochs, learning_rate=args.lr, weight_decay=args.weight_decay)
-    
-    
-    # 若是高阶网络，先保存中间结果，再聚合，输出两个文件
-    if args.hon:
-        print("Saving processing embeddings...")
-        processing_embedding_filename  = args.output + '/' + (args.input.split('/')[-1]).split('.')[0] + f'_processing_{args.method}.txt'
-        # processing_embedding_filename  = args.output.split('.')[0] + f'_processing_{args.method}.txt'
-        model.save_embeddings(processing_embedding_filename)
-        output_embedding_filename = args.output + '/' + (args.input.split('/')[-1]).split('.')[0]  + f'_hon_{args.method}.txt'
-        # output_embedding_filename = args.output.split('.')[0] + f'_hon_{args.method}.txt'
-        embedding_dict = Aggregate(dim=args.representation_size, embedding_filename=processing_embedding_filename, 
-                edgelist_filename=args.input, output_filename=output_embedding_filename)
-    # 若不是高阶网络，直接保存
-    else:
-        print("Saving embeddings...")
-        output_embedding_filename = args.output + '/' + (args.input.split('/')[-1]).split('.')[0]  + f'_fon_{args.method}.txt'
-        model.save_embeddings(output_embedding_filename)
-        # embedding_dict将model.vectors转化为字典,key为int型
-        embedding_dict = {}
-        for key, value in model.vectors.items():
-            embedding_dict[int(key.split('|')[0])] = value
-        
-    
-    if args.label_file:
-        # vectors = model.vectors  # 这里需要check一下
-        # vectors = embedding_dict
-        X, Y = read_node_label(args.label_file)
-        print(f"Training classifier using {args.clf_ratio*100:.2f}% nodes...")
-        clf = Classifier(vectors=embedding_dict, clf=LogisticRegression())
-        # clf = Classifier(vectors=vectors, clf=LogisticRegression())
-        clf.split_train_evaluate(X, Y, args.clf_ratio, seed=0)
-
-    if args.task == 1:
-        PathPrediction(embeddings=embedding_dict, test_path_length=3, dim=args.representation_size)
-    # elif args.task == 1:
-        
-    
+#     t1 = time.time()
+#     num_of_seed = 1  # 32 original// 16 works well// 8 is not as good as 16
+#     random.seed(num_of_seed)  
+#     np.random.seed(num_of_seed)
+#     # num_epochs = 10
+#     # num_negative_samples = 1
+#     GetEmbeddings(parse_args(), num_neg_samples=2, 
+#                   num_epochs=10, counter=0, walk_length=80, window_size=5, pos_prob=0.3, neg_prob=0.3, number_walks=80)
+#     t2 = time.time()
+#     running_time = t2 - t1
+#     if running_time < 900:
+#         print(f'Running time: {running_time:.5f}s')
+#     else:
+#         print(f'Running time: {time.strftime("%H:%M:%S", time.gmtime(running_time))}')
 
 if __name__ == "__main__":
-    t1 = time.time()
-    random.seed(32)
-    np.random.seed(32)
-    main(parse_args())
-    t2 = time.time()
-    running_time = t2 - t1
-    if running_time < 1800:
-        print(f'Running time: {running_time:.5f}s')
-    else:
-        print(f'Running time: {time.strftime("%H:%M:%S", time.gmtime(running_time))}')
+    # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'  # 0:全部输出，1:只输出警告和错误，2:只输出错误
+
+    num_of_seed = [8] # 32 original// 16 works well// 8 is not as good as 16
+    counter = 0
+    for seed in num_of_seed:
+        random.seed(seed)  
+        np.random.seed(seed)
+
+        walk_lengths = [80]
+        window_sizes = 5
+        num_walks = 80
+        num_epochs = 10
+        num_negative_samples = 2
+        pos_probs = 0.3
+        neg_probs = 0.3
+
+        # walk_lengths = [60,80,100]
+        # window_sizes = 5
+        # num_walks = 80
+        # num_epochs = 10
+        # num_negative_samples = 2
+        # pos_probs = 0.3
+        # neg_probs = 0.3           
+
+        method = 'HOCGE'
+        results_filename = f'C:/Users/Lenovo/Desktop/MyCode/data/dat_dge/Results/{method}/wiki_jump.txt'
+        # for size, sample, num_walk, length in itertools.product(window_sizes, num_negative_samples, num_walks, walk_length):
+        # for pos_prob, neg_prob in itertools.product(pos_probs, neg_probs):
+        for walk_length in walk_lengths:
+        # for pos_prob in pos_probs:
+            for i in range(2):
+                t1 = time.time()
+                # neg_probs = pos_prob        
+                F1_score = GetEmbeddings(parse_args(), num_negative_samples, num_epochs, counter, 
+                                walk_length, window_sizes, pos_probs, neg_probs, num_walks)
+                # print(f'epoch: {epoch}, num_negative_sample: {num_negative_sample}')
+                counter += 1
+                t2 = time.time()        
+                running_time = t2 - t1
+
+                with open(results_filename, 'a') as f:
+                    # f.write(f'num walk:{num_walk}, num_negative_sample: {sample},\n F1_score: {F1_score}, \nrunning_time: {time.strftime("%H:%M:%S", time.gmtime(running_time))}\n')
+                    f.write(f'F1_score: {F1_score}, \nrunning_time: {time.strftime("%H:%M:%S", time.gmtime(running_time))}\n') 
+                    f.write(f'counter:{counter}, seed:{seed}, walk length:{walk_length}\n')
+                    f.write(f'pos_prob:{pos_probs}, neg_prob:{neg_probs}\n')
+                    # f.write(f'window size:{size}, num_negative_sample: {sample}, ,num walk:{num_walk}, walk length:{length}\n F1_score: {F1_score}, \nrunning_time: {time.strftime("%H:%M:%S", time.gmtime(running_time))}\n')
+                    f.write('---------------------------------------------\n')
+                print(f'Running time: {time.strftime("%H:%M:%S", time.gmtime(running_time))}')
+
+# python __main__.py --method deepWalk --input air --label-file T --directed --weighted --hon --clf-ratio 0.8 

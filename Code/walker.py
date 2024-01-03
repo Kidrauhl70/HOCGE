@@ -10,17 +10,17 @@ def deepwalk_walk_wrapper(class_instance, walk_length, start_node):
 
 class BasicWalker:
     def __init__(self, G, workers):
-        self.G = G.G
-        self.node_size = G.node_size
-        self.look_up_dict = G.look_up_dict
+        self.G = G
+        # self.node_size = G.node_size
+        # self.look_up_dict = G.look_up_dict
 
     def deepwalk_walk(self, walk_length, start_node):
         '''
         Simulate a random walk starting from start node.
         '''
         G = self.G
-        look_up_dict = self.look_up_dict
-        node_size = self.node_size
+        # look_up_dict = self.look_up_dict
+        # node_size = self.node_size
 
         walk = [start_node]
 
@@ -40,15 +40,15 @@ class BasicWalker:
         G = self.G
         walks = []
         nodes = list(G.nodes())
-        print('Walk iteration:')
+        # print('Walk iteration:')
+        print('Random walking...')
         for walk_iter in range(num_walks):
             # pool = multiprocessing.Pool(processes = 4)
-            print(str(walk_iter+1), '/', str(num_walks))
+            # print(str(walk_iter+1), '/', str(num_walks))
             random.shuffle(nodes)
             for node in nodes:
                 # walks.append(pool.apply_async(deepwalk_walk_wrapper, (self, walk_length, node, )))
-                walks.append(self.deepwalk_walk(
-                    walk_length=walk_length, start_node=node))
+                walks.append(self.deepwalk_walk(walk_length=walk_length, start_node=node))
             # pool.close()
             # pool.join()
         # print(len(walks))
@@ -57,11 +57,11 @@ class BasicWalker:
 
 class Walker:
     def __init__(self, G, p, q, workers):
-        self.G = G.G
+        self.G = G
         self.p = p
         self.q = q
-        self.node_size = G.node_size
-        self.look_up_dict = G.look_up_dict
+        # self.node_size = G.node_size
+        # self.look_up_dict = G.look_up_dict
 
     def node2vec_walk(self, walk_length, start_node):
         '''
@@ -70,8 +70,8 @@ class Walker:
         G = self.G
         alias_nodes = self.alias_nodes
         alias_edges = self.alias_edges
-        look_up_dict = self.look_up_dict
-        node_size = self.node_size
+        # look_up_dict = self.look_up_dict
+        # node_size = self.node_size
 
         walk = [start_node]
 
@@ -150,8 +150,8 @@ class Walker:
         alias_edges = {}
         triads = {}
 
-        look_up_dict = self.look_up_dict
-        node_size = self.node_size
+        # look_up_dict = self.look_up_dict
+        # node_size = self.node_size
         for edge in G.edges():
             alias_edges[edge] = self.get_alias_edge(edge[0], edge[1])
 

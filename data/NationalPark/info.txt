@@ -1,0 +1,12 @@
+link
+https://www.kaggle.com/datasets/brandonrhodes/grand-canyon-np-backcountry-itineraries-2019?select=gcnp_itineraries_2019.csv
+
+Overnight camping at Grand Canyon National Park outside of the three developed campgrounds (Mather Campground and Desert View on the South Rim, and the North Rim Campground on the other side of the canyon) is controlled by a permit system. Backpackers apply months in advance for a particular itinerary on a specific date, hoping that the lottery puts their request close enough to the head of the line that they are granted a permit before the backcountry areas they want to visit are full on those dates.
+
+在大峡谷国家公园外的三个已开发的露营地(南缘的马瑟露营地和沙漠景观，以及大峡谷另一边的 North Rim Campground)过夜露营是由许可证制度控制的。背包客提前几个月申请某个特定日期的行程，希望彩票能让他们的申请足够接近行程的最前端，以便在他们想去的偏远地区在那些日子人满为患之前获得许可。
+
+The process is described in detail on the Backcountry Information Center web page:
+
+在 Backcountry 信息中心的网页上详细介绍了这一过程:
+
+https://www.nps.gov/grca/planyourvisit/backcountry-permit.htm

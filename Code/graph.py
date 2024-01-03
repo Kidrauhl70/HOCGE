@@ -18,10 +18,10 @@ class Graph(object):
         self.look_up_dict = {}
         self.look_back_list = []
         self.node_size = 0
-        self.staring_node_size = 0
-        self.ending_node_size = 0
-        self.src_list = []
-        self.dst_list = []
+        # self.staring_node_size = 0
+        # self.ending_node_size = 0
+        # self.src_list = []
+        # self.dst_list = []
 
     def encode_node(self):
         look_up = self.look_up_dict
@@ -66,8 +66,8 @@ class Graph(object):
                     src, dst, w = l.split(' ')  
                 self.G.add_edge(src, dst)
                 self.G[src][dst]['weight'] = float(w)
-                self.src_list.append(src)  # 记录起点和终点个数
-                self.dst_list.append(dst)
+                # self.src_list.append(src)  # 记录起点和终点个数
+                # self.dst_list.append(dst)
         else:
             def read_unweighted(l):
                 if filename.split('.')[-1] == 'csv':
@@ -98,10 +98,10 @@ class Graph(object):
                 break
             func(l)
         fin.close()
-        staring_node_size = len(pd.unique(self.src_list))
-        ending_node_size = len(pd.unique(self.dst_list))
-        print(f"the unique number of starting nodes is {staring_node_size}")
-        print(f"the unique number of ending nodes is {ending_node_size}")
+        # staring_node_size = len(pd.unique(self.src_list))
+        # ending_node_size = len(pd.unique(self.dst_list))
+        # # print(f"the unique number of starting nodes is {staring_node_size}")
+        # print(f"the unique number of ending nodes is {ending_node_size}")
         print(f"the unique number of nodes is {len(pd.unique(self.G.nodes()))}")
         self.encode_node()
 

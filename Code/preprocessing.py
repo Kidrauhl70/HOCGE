@@ -1,4 +1,3 @@
-
 # 将str类型的轨迹数据文件转化成int类型的轨迹数据文件
 def DataPreprocessing(mapping_filename, trajectory_filename, converted_trajectory_filename):
     # 读取编号-节点(str)映射文件
